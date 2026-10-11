@@ -1,90 +1,141 @@
-![pgproxy](./pgproxy.png)
+# ShardGate
 
-# pgproxy
-[![Build Status](https://travis-ci.org/wgliang/pgproxy.svg?branch=master)](https://travis-ci.org/wgliang/pgproxy)
-[![codecov](https://codecov.io/gh/wgliang/pgproxy/branch/master/graph/badge.svg)](https://codecov.io/gh/wgliang/pgproxy)
-[![GoDoc](https://godoc.org/github.com/wgliang/pgproxy?status.svg)](https://godoc.org/github.com/wgliang/pgproxy)
-[![Code Health](https://landscape.io/github/wgliang/pgproxy/master/landscape.svg?style=flat)](https://landscape.io/github/wgliang/pgproxy/master)
-[![Code Issues](https://www.quantifiedcode.com/api/v1/project/98b2cb0efd774c5fa8f9299c4f96a8c5/badge.svg)](https://www.quantifiedcode.com/app/project/98b2cb0efd774c5fa8f9299c4f96a8c5)
-[![Go Report Card](https://goreportcard.com/badge/github.com/wgliang/pgproxy)](https://goreportcard.com/report/github.com/wgliang/pgproxy)
-[![License](https://img.shields.io/badge/LICENSE-Apache2.0-ff69b4.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
+**A PostgreSQL proxy for SQL routing, query analysis, and database traffic management, written in Go.**
 
-pgproxy is a postgresql proxy server, through a pipe redirect connection, which allows you to filter the requested sql statement. In the future it will support multi-database backup, adapt to distributed databases and other schemes except the  analyze sql statement.
+ShardGate is an infrastructure engineering project based on the open-source [pgproxy](https://github.com/wgliang/pgproxy). It explores how a proxy layer can sit between applications and PostgreSQL to manage database requests, inspect SQL statements, and apply routing and filtering policies.
 
-You can do:
+> **Project status:** Work in progress. The codebase is derived from pgproxy and has not yet been independently validated in the current development environment.
 
-* database read and write separation
-* database services disaster recovery
-* proxy database
-* rewrite sql statement
-* filter dangerous sql
-* monitor database operations
-* sql requests current limit and merge
+## Overview
 
-## Installation
+Applications communicating directly with database servers can become difficult to manage as traffic and infrastructure grow.
 
-```
-$ go get -u github.com/wgliang/pgproxy
-```
+ShardGate explores a centralized proxy layer responsible for:
 
-## Using
+- Forwarding client connections to PostgreSQL backends
+- Analyzing SQL requests before forwarding
+- Applying query filtering and rewriting policies
+- Supporting read/write traffic separation
+- Providing a foundation for monitoring and traffic management
 
-### As a separate application
+The current codebase inherits functionality from the upstream pgproxy project. Individual capabilities require testing before they are treated as validated ShardGate features.
 
-Start or shut down the proxy server.
-```
-$ pgproxy start/stop
-```
+## Architecture
 
-Use pgproxy on the command line
-```
-$ pgproxy cli
-```
-
-Ps: You can use it as you would with a native command line.
-
-### Be called as a package
-
-[package_example](https://github.com/wgliang/pgproxy/blob/master/examples/package_example.go)
-
-```
-package main
-
-import (
-	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
-
-	"github.com/wgliang/pgproxy/cli"
-)
-
-func main() {
-	// call proxy
-	cli.Main("../pgproxy.conf", []string{"pgproxy", "start"})
-	
-	// 捕获ctrl-c,平滑退出
-	chExit := make(chan os.Signal, 1)
-	signal.Notify(chExit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-	select {
-	case <-chExit:
-		fmt.Println("Example EXITING...Bye.")
-	}
-}
-
+```text
+                  Application / Client
+                           |
+                           v
+                    +-------------+
+                    |  ShardGate  |
+                    |  Go Proxy   |
+                    +-------------+
+                           |
+                 +---------+---------+
+                 |                   |
+                 v                   v
+           SQL Analysis       Request Routing
+           and Filtering       and Forwarding
+                 |                   |
+                 +---------+---------+
+                           |
+                           v
+                       PostgreSQL
 ```
 
-## Support
+## Technology Stack
 
-select/delete/update statement and support any case.
+| Technology | Purpose |
+|---|---|
+| Go | Proxy server implementation |
+| PostgreSQL | Target database |
+| SQL Parser | Query analysis and transformation |
+| Git | Version control |
 
-On the support of the sql standard：
+## Existing Codebase
 
-The parser is forked from vitess's [sqlparser](https://github.com/youtube/vitess/tree/master/go/vt/sqlparser) of youtube.
+The upstream pgproxy project describes support for:
 
-In pgproxy, database tables are like MySQL(5.6,5.7) relational tables, and you can use relational modeling schemes (normalization) to structure your schema. It supports almost all MySQL(5.6,5.7) scalar data types. It also provides full SQL support within a shard, including JOIN statements. Some postgresql operations are not supported,detail see [support type and keywords](https://github.com/wgliang/pgproxy/blob/master/parser/token.go#L37).
+- PostgreSQL connection proxying
+- SQL statement inspection and filtering
+- SQL rewriting
+- Read/write separation
+- Database operation monitoring
+- Request limiting
+- Database service recovery features
+
+These capabilities are inherited from the upstream source and are not presented as independently implemented features.
+
+## Getting Started
+
+### Prerequisites
+
+- Go development environment
+- PostgreSQL server
+- Git
+
+### Clone the repository
+
+```bash
+git clone https://github.com/N-Aryan/ShardGate.git
+cd ShardGate
+```
+
+### Inspect the configuration
+
+The upstream project includes a `pgproxy.conf` configuration file.
+
+Review the database connection settings before attempting to run the proxy.
+
+### Build and test
+
+The current codebase comes from an older Go project and may require dependency or module compatibility updates.
+
+```bash
+go version
+go test ./...
+```
+
+A successful build and test run has not yet been verified. Setup instructions will be updated after the development environment and dependencies have been validated.
+
+## Development Roadmap
+
+- [ ] Establish a reproducible build environment
+- [ ] Validate existing PostgreSQL proxy functionality
+- [ ] Add connection and request timeout handling
+- [ ] Improve backend health monitoring
+- [ ] Introduce integration tests for database routing
+- [ ] Add load-testing benchmarks
+- [ ] Document performance and failure-handling behavior
+
+## Project Structure
+
+```text
+ShardGate/
+├── cli/              # Command-line functionality
+├── parser/           # SQL parsing and analysis
+├── proxy/            # Proxy implementation
+├── examples/         # Example integrations
+├── pgproxy.conf      # Proxy configuration
+├── main.go           # Application entry point
+├── LICENSE
+└── README.md
+```
+
+## Attribution and License
+
+ShardGate is derived from **[wgliang/pgproxy](https://github.com/wgliang/pgproxy)**, originally developed by its respective contributors.
+
+The upstream project is distributed under the **Apache License 2.0**. Its original license and copyright notices are retained.
+
+The SQL parser also incorporates code based on [sqlparser](https://github.com/xwb1989/sqlparser), as acknowledged by the upstream project.
+
+This repository is an independent learning and development effort. It is not affiliated with or endorsed by the original pgproxy maintainers.
+
+## Author
+
+**Aryan Narang**
+
+[GitHub](https://github.com/N-Aryan)
 
 
-## Credits
-
-Package parser is based on [sqlparser](https://github.com/xwb1989/sqlparser)
